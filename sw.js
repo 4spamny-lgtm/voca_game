@@ -1,5 +1,14 @@
-const CACHE='wordquest-800-v11';
-const CORE=['./','./index.html','./app.js','./words800.js','./manifest.webmanifest','./icon.svg'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==location.origin)return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,copy))}return r}))) });
+/* WORD QUEST 5-region release 2026-10-16. Always request current code from network. */
+const VERSION='wordquest-five-regions-20261016';
+self.addEventListener('install', event=>{self.skipWaiting();});
+self.addEventListener('activate',event=>{event.waitUntil((async()=>{for(const key of await caches.keys()){if(key.startsWith('wordquest')&&key!==VERSION)await caches.delete(key);}await self.clients.claim();})());});
+self.addEventListener('fetch',event=>{
+ const url=new URL(event.request.url);
+ if(url.origin!==self.location.origin||event.request.method!=='GET')return;
+ if(event.request.mode==='navigate'||/\.(?:js|html|css|webmanifest)$/.test(url.pathname)){
+  event.respondWith(fetch(event.request,{cache:'no-store'}).catch(async()=>{
+   const cached=await caches.match(event.request);
+   return cached||Response.error();
+  }));
+ }
+});
